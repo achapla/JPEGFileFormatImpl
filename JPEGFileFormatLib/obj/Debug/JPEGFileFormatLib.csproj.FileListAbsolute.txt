@@ -1,0 +1,6 @@
+c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\bin\Debug\JPEGFileFormatLib.exe.config
+c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\bin\Debug\JPEGFileFormatLib.exe
+c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\bin\Debug\JPEGFileFormatLib.pdb
+c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\obj\Debug\JPEGFileFormatLib.csprojResolveAssemblyReference.cache
+c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\obj\Debug\JPEGFileFormatLib.exe
+c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\obj\Debug\JPEGFileFormatLib.pdb
