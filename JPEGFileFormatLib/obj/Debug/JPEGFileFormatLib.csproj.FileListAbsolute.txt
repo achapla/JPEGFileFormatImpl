@@ -4,3 +4,8 @@ c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFi
 c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\obj\Debug\JPEGFileFormatLib.csprojResolveAssemblyReference.cache
 c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\obj\Debug\JPEGFileFormatLib.exe
 c:\users\achapla\documents\visual studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\obj\Debug\JPEGFileFormatLib.pdb
+C:\Users\achapla\Documents\Visual Studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\bin\Debug\Samples\car.jpg
+C:\Users\achapla\Documents\Visual Studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\bin\Debug\Samples\fig2.jpg
+C:\Users\achapla\Documents\Visual Studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\bin\Debug\Samples\fig3.jpg
+C:\Users\achapla\Documents\Visual Studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\bin\Debug\Samples\iron_man.jpg
+C:\Users\achapla\Documents\Visual Studio 2017\Projects\JPEGFileFormatImpl\JPEGFileFormatLib\bin\Debug\Samples\kiss-smiley-pillow.jpg

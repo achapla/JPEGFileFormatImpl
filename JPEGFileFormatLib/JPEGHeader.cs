@@ -13,13 +13,6 @@ namespace JPEGFileFormatLib
         UInt16 marker;
         UInt16 markerSize;
         UInt32 identifier;
-        Byte versionMajor;
-        Byte versionMinor;
-        Byte units;
-        UInt16 XDensity;
-        UInt16 YDensity;
-        Byte XThumbnail;
-        Byte YThumbnail;
 
         public bool IsJPEG { get { return soi == 0xffd8 && (marker & 0xffe0) == 0xffe0; } }
         public bool IsEXIF { get { return IsJPEG && identifier == 0x45786966; } }
@@ -29,7 +22,7 @@ namespace JPEGFileFormatLib
 
         internal void ReadHeader(BinaryReaderFlexiEndian reader)
         {
-            byte[] vals = reader.ReadBytes(40);
+            Console.WriteLine("Reading header...");
 
             reader.UseBigEndian = true;
             reader.BaseStream.Position = 0;
@@ -37,63 +30,67 @@ namespace JPEGFileFormatLib
             marker = reader.ReadUInt16(); // JFIF marker (FFE0) EXIF marker (FFE1)
             markerSize = reader.ReadUInt16(); // size of marker data (incl. marker)
             identifier = reader.ReadUInt32(); // JFIF 0x4649464a or Exif  0x66697845
-            reader.ReadByte(); //Discard parity
-            versionMajor = reader.ReadByte(); //Version 1.02 is the current released revision
-            versionMinor = reader.ReadByte(); //Version 1.02 is the current released revision
-            units = reader.ReadByte(); //Units for X and Y densities => 0:no units(pixel) => 1:dots per inch => 2:dots per cm
-            XDensity = reader.ReadUInt16(); //Horizontal pixel density
-            YDensity = reader.ReadUInt16(); //Vertical pixel density
-            XThumbnail = reader.ReadByte(); // Thumbnail horizontal pixel count
-            YThumbnail = reader.ReadByte(); // Thumbnail vertical pixel count
-
-            ReadRGBForThunbnail(reader);
+            while (reader.PeekChar() == 0x00)
+                reader.ReadByte(); //Discard parity
+            reader.BaseStream.Position = 2;
             ReadStructure(reader);
         }
 
         private void ReadStructure(BinaryReaderFlexiEndian reader)
         {
+            Console.WriteLine("Reading structure...");
             while (reader.BaseStream.Position != reader.BaseStream.Length)
             {
-                JPEGJFIFMarkers markerTag = (JPEGJFIFMarkers)reader.ReadUInt16();
+                JFIFMarkers markerTag = (JFIFMarkers)reader.ReadUInt16();
+                Console.WriteLine($"Current marker tag : {markerTag.ToString()}");
                 switch (markerTag)
                 {
-                    case JPEGJFIFMarkers.APP1:
-                        objs.Add(new JPEGAPP1(reader));
+                    case JFIFMarkers.APP0:
+                        objs.Add(new APP0(reader));
                         break;
-                    case JPEGJFIFMarkers.APP12:
-                        objs.Add(new JPEGAPP12(reader));
+                    case JFIFMarkers.APP1:
+                        objs.Add(new APP1(reader));
                         break;
-                    case JPEGJFIFMarkers.APP14:
-                        objs.Add(new JPEGAPP14(reader));
+                    case JFIFMarkers.APP2:
+                        objs.Add(new APP2(reader));
                         break;
-                    case JPEGJFIFMarkers.DQT:
-                        objs.Add(new JPEGDQT(reader));
+                    case JFIFMarkers.APP12:
+                        objs.Add(new APP12(reader));
                         break;
-                    case JPEGJFIFMarkers.DHT:
-                        objs.Add(new JPEGDHT(reader));
+                    case JFIFMarkers.APP13:
+                        objs.Add(new APP13(reader));
                         break;
-                    case JPEGJFIFMarkers.COM:
-                        objs.Add(new JPEGCOM(reader));
+                    case JFIFMarkers.APP14:
+                        objs.Add(new APP14(reader));
                         break;
-                    case JPEGJFIFMarkers.SOS:
-                        objs.Add(new JPEGSOS(reader));
+                    case JFIFMarkers.DRI:
+                        objs.Add(new DRI(reader));
+                        break;
+                    case JFIFMarkers.DQT:
+                        objs.Add(new DQT(reader));
+                        break;
+                    case JFIFMarkers.DHT:
+                        objs.Add(new DHT(reader));
+                        break;
+                    case JFIFMarkers.COM:
+                        objs.Add(new COM(reader));
+                        break;
+                    case JFIFMarkers.SOS:
+                        objs.Add(new SOS(reader));
+                        break;
+                    case JFIFMarkers.SOI:
+                        break;
+                    case JFIFMarkers.EOI:
+                        break;
+                    case JFIFMarkers.SOF0:
+                        objs.Add(new SOF0(reader));
                         break;
                     default:
-                        objs.Add(new JPEGQuantizationTable(reader));
+                        objs.Add(new QuantizationTable(reader));
                         Console.WriteLine("New tag : {0}", markerTag);
                         break;
                 }
                 //JPEGQuantizationTable dqt = new JPEGQuantizationTable(reader);
-            }
-        }
-
-        private void ReadRGBForThunbnail(BinaryReaderFlexiEndian reader)
-        {
-            int n = XThumbnail * YThumbnail;
-
-            for (int i = 0; i < n; i++)
-            {
-
             }
         }
     }

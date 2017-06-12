@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace JPEGFileFormatLib
 {
-    internal class JPEGQuantizationTable
+    internal class QuantizationTable
     {
         UInt16 length;
         byte[] dqt;
 
-        internal JPEGQuantizationTable(BinaryReaderFlexiEndian reader)
+        internal QuantizationTable(BinaryReaderFlexiEndian reader)
         {
             length = reader.ReadUInt16(); //(UInt16)(reader.ReadByte() * 256 + reader.ReadByte()); //Length of structure
             dqt = reader.ReadBytes(length - 2);

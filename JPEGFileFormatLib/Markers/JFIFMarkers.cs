@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace JPEGFileFormatLib
 {
-    internal enum JPEGJFIFMarkers : UInt16
+    internal enum JFIFMarkers : UInt16
     {
         SOF0 = 0xFFC0,
         SOF1 = 0xFFC1,

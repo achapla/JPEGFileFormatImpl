@@ -22,10 +22,6 @@ namespace JPEGFileFormatLib
             _reader = new BinaryReaderFlexiEndian(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
 
             _header.ReadHeader(_reader);
-
-            if (!_header.IsJFIF)
-                throw new NotSupportedException("Only JFIF format supported...");
-
         }
 
         public void Dispose()

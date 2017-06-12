@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace JPEGFileFormatLib
 {
-    internal class JPEGCOM
+    internal class COM
     {
         UInt16 length;
         string comment;
 
-        internal JPEGCOM(BinaryReaderFlexiEndian reader)
+        internal COM(BinaryReaderFlexiEndian reader)
         {
             length = reader.ReadUInt16(); //Length of structure
 

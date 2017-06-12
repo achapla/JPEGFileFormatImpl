@@ -14,7 +14,8 @@ namespace JPEGFileFormatLib
         internal UInt32 dataValue;
         internal UInt32 dataOffset;
         internal UInt32 DataLength { get { return numberOfComponents * GetBytesPerComponent(); } }
-
+        internal byte[] data;
+        internal List<APP1.IFDBlock> blocks = new List<APP1.IFDBlock>();
         private UInt32 GetBytesPerComponent()
         {
             switch (dataFormat)
