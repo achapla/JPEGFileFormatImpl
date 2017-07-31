@@ -30,8 +30,10 @@ namespace JPEGFileFormatLib
             marker = reader.ReadUInt16(); // JFIF marker (FFE0) EXIF marker (FFE1)
             markerSize = reader.ReadUInt16(); // size of marker data (incl. marker)
             identifier = reader.ReadUInt32(); // JFIF 0x4649464a or Exif  0x66697845
+
+            byte[] tagMarker = new byte[2];
             while (reader.PeekChar() == 0x00)
-                reader.ReadByte(); //Discard parity
+                tagMarker[0] = reader.ReadByte(); //Discard parity
             reader.BaseStream.Position = 2;
             ReadStructure(reader);
         }
@@ -91,6 +93,19 @@ namespace JPEGFileFormatLib
                         break;
                 }
                 //JPEGQuantizationTable dqt = new JPEGQuantizationTable(reader);
+            }
+
+            SOS lastScan = (SOS)objs.Last(obj => obj.GetType().Equals(typeof(SOS)));
+            byte[,] data = new byte[8, 8];
+
+            for (int i = 0; i < 8; i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    data[i, j] = lastScan.compressedData[i * 8 + j];
+                    Console.Write(data[i, j].ToString("X") + " ");
+                }
+                Console.WriteLine();
             }
         }
     }

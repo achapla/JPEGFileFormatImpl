@@ -23,7 +23,7 @@ namespace JPEGFileFormatLib
             while (reader.PeekChar() != 0)
                 tag += reader.ReadChar();
 
-            reader.ReadByte(); //Discard null terminator
+            byte extraByte = reader.ReadByte(); //Discard null terminator
 
             blockNumber = reader.ReadByte();
             blockTotal = reader.ReadByte();

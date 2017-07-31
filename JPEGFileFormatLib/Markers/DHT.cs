@@ -25,7 +25,7 @@ namespace JPEGFileFormatLib
             byte HTInformation;
             byte[] data;
             byte numberOfHT { get { return (byte)(HTInformation & 0x0F); } }
-            byte typeOfHT; //type of HT, 0 = DC table, 1 = AC table
+            byte typeOfHT; //type of HT, 0 = DC / Lossless Table, 1 = AC table
             byte[] numderOfSymbols;
 
             internal DHTStruct(BinaryReaderFlexiEndian reader)

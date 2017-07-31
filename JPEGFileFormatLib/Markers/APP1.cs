@@ -29,8 +29,9 @@ namespace JPEGFileFormatLib
             while (!(reader.PeekChar() == 0x00 || reader.PeekChar() == 0xFF))
                 tag += reader.ReadChar();
 
+            byte extraBytes = new byte();
             while (reader.PeekChar() == 0x00 || reader.PeekChar() == 0xFF)
-                reader.ReadChar();
+                extraBytes = reader.ReadByte();
 
             if (isFirstApp1Marker)
             {

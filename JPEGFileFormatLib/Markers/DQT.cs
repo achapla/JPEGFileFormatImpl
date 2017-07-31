@@ -22,7 +22,7 @@ namespace JPEGFileFormatLib
 
         internal class DQTStruct
         {
-            byte QTInformation;
+            byte QTInformation; // 0 : Luminance, 1 : Chrominance
             byte[] data;
             byte numberOfQT;
             byte precision { get { return (byte)(QTInformation & 0xF0); } }

@@ -34,8 +34,8 @@ namespace JPEGFileFormatLib
         internal class SOF0Component
         {
             byte componentId;
-            byte samplingFactors;
-            byte quantizationTableNumber;
+            byte samplingFactors; //Samp Fac=0x11 (Subsamp 1 x 1) (4:4:4)
+            byte quantizationTableNumber; //0x00 (Lum: Y), 0x01 (Chrom: Cb), 0x01 (Chrom: Cr)
             int vertical { get { return samplingFactors & 0x0F; } }
             int horizontal { get { return samplingFactors >> 4; } }
 

@@ -13,13 +13,13 @@ namespace JPEGFileFormatLib
     {
         long start;
         UInt16 length;
-        UInt16 ri;
+        UInt16 RestartInterval;
 
         internal DRI(BinaryReaderFlexiEndian reader)
         {
             start = reader.BaseStream.Position;
             length = reader.ReadUInt16();
-            ri = reader.ReadUInt16();
+            RestartInterval = reader.ReadUInt16();
         }
     }
 }

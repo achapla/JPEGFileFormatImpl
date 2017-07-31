@@ -19,7 +19,7 @@ namespace JPEGFileFormatLib
         byte approximationData;
         byte approximationHigh { get { return (byte)(approximationData & 0x0F); } }
         byte approximationLow { get { return (byte)(approximationData >> 4); } }
-        byte[] compressedData;
+        public byte[] compressedData;
 
         internal SOS(BinaryReaderFlexiEndian reader)
         {
@@ -73,7 +73,7 @@ namespace JPEGFileFormatLib
         internal class SOSComponent
         {
             byte componentId;
-            byte huffmanTableToUse;
+            byte huffmanTableToUse; //table=0(DC),0(AC) ==> table=1(DC),1(AC) ==> table=1(DC),1(AC)
 
             internal SOSComponent(BinaryReaderFlexiEndian reader)
             {

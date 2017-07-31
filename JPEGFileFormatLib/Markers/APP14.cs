@@ -14,10 +14,10 @@ namespace JPEGFileFormatLib
     {
         UInt16 length;
         string tag;
-        byte version;
+        byte DCTEncodeVersion;
         UInt16 flag0;
         UInt16 flag1;
-        byte transform;
+        byte ColorTransform;
 
         internal APP14(BinaryReaderFlexiEndian reader)
         {
@@ -28,10 +28,10 @@ namespace JPEGFileFormatLib
 
             reader.ReadByte(); //Discard null terminator
 
-            version = reader.ReadByte();
+            DCTEncodeVersion = reader.ReadByte();
             flag0 = reader.ReadUInt16();
             flag1 = reader.ReadUInt16();
-            transform = reader.ReadByte();
+            ColorTransform = reader.ReadByte(); // 1: YCbCr
         }
     }
 }

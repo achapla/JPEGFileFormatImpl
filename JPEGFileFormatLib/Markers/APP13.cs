@@ -22,7 +22,7 @@ namespace JPEGFileFormatLib
             while (reader.PeekChar() != 0)
                 tag += reader.ReadChar();
 
-            reader.ReadByte(); //Discard null terminator
+            byte extraByte = reader.ReadByte(); //Discard null terminator
 
             if (tag.Equals("Adobe_CM", StringComparison.OrdinalIgnoreCase))
             {
@@ -62,7 +62,7 @@ namespace JPEGFileFormatLib
             internal enum PhotoshopTag
             {
                 PS_IPTCData = 0x0404,
-                PS_JPEG_Quality = 0x0406,
+                PS_JPEGQuality = 0x0406,
                 PS_PhotoshopBGRThumbnail = 0x0409,
                 PS_CopyrightFlag = 0x040a,
                 PS_URL = 0x040b,
@@ -73,6 +73,21 @@ namespace JPEGFileFormatLib
                 PS_XMP = 0x0424,
                 PS_IPTCDigest = 0x0425,
                 PS_ClippingPathName = 0x0bb7,
+                PS_PrintInformation = 0x043a,
+                PS_PrintStyle = 0x043b,
+                PS_ResolutionInforStructure = 0x03ed,
+                PS_PrintScale = 0x0426,
+                PS_PrintFlags = 0x03f3,
+                PS_PrintFlagsInformation = 0x2710,
+                PS_GlobalAngle = 0x040d,
+                PS_ColorHalftoningInformation = 0x03f5,
+                PS_ColorTransferFunctions = 0x03f8,
+                PS_GridAndGuidesInformation = 0x0408,
+                PS_URLList = 0x041E,
+                PS_Slices = 0x041A,
+                PS_PixelAspectRatio = 0x0428,
+                PS_DocumentSpecificIDsSeedNumber = 0x0414,
+                PS_VersionInfo = 0x0421,
             }
         }
     }
