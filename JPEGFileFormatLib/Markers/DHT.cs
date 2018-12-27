@@ -2,15 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JPEGFileFormatLib
 {
     internal class DHT
     {
-        UInt16 length;
-        List<DHTStruct> tables = new List<DHTStruct>();
+        readonly UInt16 length;
+        public List<DHTStruct> tables = new List<DHTStruct>();
 
         internal DHT(BinaryReaderFlexiEndian reader)
         {
@@ -20,13 +18,23 @@ namespace JPEGFileFormatLib
                 tables.Add(new DHTStruct(reader));
         }
 
+        internal void GenerateBitArrayMap()
+        {
+            foreach (DHTStruct table in tables)
+            {
+                table.GenerateBitArrayMap();
+            }
+        }
+
         internal class DHTStruct
         {
-            byte HTInformation;
-            byte[] data;
-            byte numberOfHT { get { return (byte)(HTInformation & 0x0F); } }
-            byte typeOfHT; //type of HT, 0 = DC / Lossless Table, 1 = AC table
-            byte[] numderOfSymbols;
+            internal readonly byte HTInformation;
+            internal byte[] data;
+            internal byte numberOfHT { get { return (byte)(HTInformation & 0x0F); } }
+            internal readonly byte typeOfHT; //type of HT, 0 = DC / Lossless Table, 1 = AC table
+            internal HuffmanTableType TableType { get { return (HuffmanTableType)typeOfHT; } }
+            internal byte[] numderOfSymbols;
+            internal Dictionary<string, int> bitMaps = new Dictionary<string, int>();
 
             internal DHTStruct(BinaryReaderFlexiEndian reader)
             {
@@ -37,6 +45,45 @@ namespace JPEGFileFormatLib
                 var sumOfSymbols = numderOfSymbols.Sum(val => val);
                 data = reader.ReadBytes(sumOfSymbols);
             }
+
+            internal void GenerateBitArrayMap()
+            {
+                Dictionary<string, int> bitmap = new Dictionary<string, int>();
+                int l = 0;
+
+                foreach (var symbolItem in numderOfSymbols)
+                {
+                    if (l == data.Length)
+                        break;
+                    if (bitmap.Count == 0)
+                    {
+                        bitmap.Add("0", -1);
+                        bitmap.Add("1", -1);
+                    }
+                    else
+                    {
+                        Dictionary<string, int> newbp = new Dictionary<string, int>();
+                        foreach (var bmpk in bitmap.Keys)
+                        {
+                            newbp.Add(bmpk + "0", -1);
+                            newbp.Add(bmpk + "1", -1);
+                        }
+                        bitmap = newbp;
+                    }
+                    for (int i = 0; i < symbolItem; i++)
+                    {
+                        KeyValuePair<string, int> firstOpen = bitmap.First();
+                        bitmap.Remove(firstOpen.Key);
+                        bitMaps.Add(firstOpen.Key, data[l++]);
+                    }
+                }
+            }
+        }
+
+        internal enum HuffmanTableType
+        {
+            DC = 0,
+            AC = 1
         }
     }
 }

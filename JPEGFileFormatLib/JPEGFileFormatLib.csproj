@@ -58,10 +58,12 @@
     <Compile Include="Markers\DHT.cs" />
     <Compile Include="Markers\DQT.cs" />
     <Compile Include="Markers\DRI.cs" />
+    <Compile Include="Markers\IJpegMarker.cs" />
     <Compile Include="Markers\JFIFMarkers.cs" />
     <Compile Include="Markers\QuantizationTable.cs" />
     <Compile Include="Markers\SOS.cs" />
     <Compile Include="Markers\SOF0.cs" />
+    <Compile Include="MCU.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -77,6 +79,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Samples\fig3.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Samples\huff_simple0.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Samples\iron_man.jpg">

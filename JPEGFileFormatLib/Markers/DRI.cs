@@ -13,7 +13,7 @@ namespace JPEGFileFormatLib
     {
         long start;
         UInt16 length;
-        UInt16 RestartInterval;
+        UInt16 RestartInterval; //0 means no restart interval
 
         internal DRI(BinaryReaderFlexiEndian reader)
         {

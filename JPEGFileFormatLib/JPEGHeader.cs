@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace JPEGFileFormatLib
 {
@@ -14,7 +13,7 @@ namespace JPEGFileFormatLib
         UInt16 markerSize;
         UInt32 identifier;
 
-        public bool IsJPEG { get { return soi == 0xffd8 && (marker & 0xffe0) == 0xffe0; } }
+        public bool IsJPEG { get { return soi == 0xFFD8 && (marker & 0xFFE0) == 0xFFE0; } }
         public bool IsEXIF { get { return IsJPEG && identifier == 0x45786966; } }
         public bool IsJFIF { get { return IsJPEG && identifier == 0x4A464946; } }
 
@@ -94,19 +93,203 @@ namespace JPEGFileFormatLib
                 }
                 //JPEGQuantizationTable dqt = new JPEGQuantizationTable(reader);
             }
-
+            //decode https://www.impulseadventure.com/photo/jpeg-huffman-coding.html
             SOS lastScan = (SOS)objs.Last(obj => obj.GetType().Equals(typeof(SOS)));
-            byte[,] data = new byte[8, 8];
+            DHT lastDHT = (DHT)objs.Last(obj => obj.GetType().Equals(typeof(DHT)));
+            lastDHT.GenerateBitArrayMap();
 
-            for (int i = 0; i < 8; i++)
+            using (MemoryStream cdms = new MemoryStream(lastScan.compressedData))
             {
-                for (int j = 0; j < 8; j++)
+                bool isEOF = false;
+                StringBuilder binaryStringBuilder = new StringBuilder();
+                List<MCU> mcus = new List<MCU>();
+                byte lastIntervalValue = 0xD0;
+
+                do
                 {
-                    data[i, j] = lastScan.compressedData[i * 8 + j];
-                    Console.Write(data[i, j].ToString("X") + " ");
-                }
-                Console.WriteLine();
+                    byte[] buffer = new byte[cdms.Length - cdms.Position > 1024 ? 1024 : cdms.Length - cdms.Position];
+                    buffer = new byte[1024];
+                    cdms.Read(buffer, 0, buffer.Length);
+                    isEOF = cdms.Position == cdms.Length;
+                    byte? lastByte = null;
+                    bool restartIntervalDetected = false;
+                    foreach (var b in buffer)
+                    {
+                        if (lastByte == null)
+                        {
+                            lastByte = b;
+                            continue;
+                        }
+
+                        if (lastByte == 0xFF && b == 0x00)
+                        {
+                            continue;
+                        }
+                        else if (lastByte == 0xFF && b == lastIntervalValue)
+                        {
+                            binaryStringBuilder.Append('|');
+                            restartIntervalDetected = true;
+                            lastByte = b;
+                            lastIntervalValue++;
+                            if (lastIntervalValue == 0xD8)
+                                lastIntervalValue = 0xD0;
+                            //lastByte = null;
+                            continue;
+                        }
+
+                        if (restartIntervalDetected)
+                        {
+                            binaryStringBuilder.Append(Convert.ToString(b, 2));
+                            restartIntervalDetected = false;
+                            lastByte = null;
+                            continue;
+                        }
+                        else
+                            binaryStringBuilder.Append(Convert.ToString(lastByte.Value, 2).PadLeft(8, '0'));
+                        lastByte = b;
+                        //if (previousWasFF)
+                        //{
+                        //    if (b == 0x00)
+                        //    {
+                        //        previousWasFF = false;
+                        //        continue;
+                        //    }
+                        //}
+                        //previousWasFF = b == 0xFF;
+                        //binaryStringBuilder.Append(Convert.ToString(b, 2).PadLeft(8, '0'));
+                    }
+
+                    if (lastByte.HasValue)
+                        binaryStringBuilder.Append(Convert.ToString(lastByte.Value, 2).PadLeft(8, '0'));
+
+                    try
+                    {
+                        while (binaryStringBuilder.Length > 4092)
+                        {
+                            if (binaryStringBuilder.ToString().Substring(0, 8).Contains('|'))
+                            {
+                                binaryStringBuilder.Remove(0, binaryStringBuilder.ToString().IndexOf('|') + 1);
+                            }
+                            if (mcus.Count == 1976)
+                            {
+                                Console.WriteLine();
+                            }
+                            MCU mCU = new MCU();
+                            mCU.ReadData(lastDHT, binaryStringBuilder);
+                            mcus.Insert(0, mCU);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+
+                    //decimal dcLuminance = GetLuminanceDC(lastDHT, binaryStringBuilder);
+                    //decimal acLuminance = GetLuminanceAC(lastDHT, binaryStringBuilder);
+                    //while (acLuminance != 0)
+                    //{
+                    //    acLuminance = GetLuminanceAC(lastDHT, binaryStringBuilder);
+                    //}
+
+                    //decimal dcChrominanceCb = GetChrominanceDC(lastDHT, binaryStringBuilder);
+                    //decimal acChrominanceCb = GetChrominanceAC(lastDHT, binaryStringBuilder);
+                    //while (acChrominanceCb != 0)
+                    //{
+                    //    acChrominanceCb = GetChrominanceAC(lastDHT, binaryStringBuilder);
+                    //}
+
+                    //decimal dcChrominanceCr = GetChrominanceDC(lastDHT, binaryStringBuilder);
+                    //decimal acChrominanceCr = GetChrominanceAC(lastDHT, binaryStringBuilder);
+                    //while (acChrominanceCr != 0)
+                    //{
+                    //    acChrominanceCr = GetChrominanceAC(lastDHT, binaryStringBuilder);
+                    //}
+                } while (!isEOF);
             }
+        }
+
+        private decimal GetChrominanceAC(DHT lastDHT, StringBuilder binaryStringBuilder)
+        {
+            DHT.DHTStruct acChrominanceTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.AC && t.numberOfHT == 1);
+
+            int i = 0;
+            while (!acChrominanceTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))
+                i++;
+
+            int additionalBitsToConvert = acChrominanceTable.bitMaps[binaryStringBuilder.ToString().Substring(0, i)];
+            if (additionalBitsToConvert == 0)
+            {
+                binaryStringBuilder.Remove(0, i + additionalBitsToConvert);
+                return 0;
+            }
+            string acCodeValue = binaryStringBuilder.ToString().Substring(i, additionalBitsToConvert);
+            binaryStringBuilder.Remove(0, i + additionalBitsToConvert);
+            if (acCodeValue.StartsWith("0"))
+                return ~Convert.ToInt32(acCodeValue, 2);
+            return Convert.ToInt32(acCodeValue, 2);
+        }
+
+        private decimal GetChrominanceDC(DHT lastDHT, StringBuilder binaryStringBuilder)
+        {
+            DHT.DHTStruct dcChrominanceTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.DC && t.numberOfHT == 1);
+
+            int i = 0;
+            while (!dcChrominanceTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))
+                i++;
+
+            int additionalBitsToConvert = dcChrominanceTable.bitMaps[binaryStringBuilder.ToString().Substring(0, i)];
+            if (additionalBitsToConvert == 0)
+            {
+                binaryStringBuilder.Remove(0, i + additionalBitsToConvert);
+                return 0;
+            }
+            string dcCodeValue = binaryStringBuilder.ToString().Substring(i, additionalBitsToConvert);
+            binaryStringBuilder.Remove(0, i + additionalBitsToConvert);
+            if (dcCodeValue.StartsWith("0"))
+                return ~Convert.ToInt32(dcCodeValue, 2);
+            return Convert.ToInt32(dcCodeValue, 2);
+        }
+
+        private decimal GetLuminanceAC(DHT lastDHT, StringBuilder binaryStringBuilder)
+        {
+            DHT.DHTStruct acLuminanceTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.AC && t.numberOfHT == 0);
+
+            int i = 0;
+            while (!acLuminanceTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))
+                i++;
+
+            int additionalBitsToConvert = acLuminanceTable.bitMaps[binaryStringBuilder.ToString().Substring(0, i)];
+            if (additionalBitsToConvert == 0)
+            {
+                binaryStringBuilder.Remove(0, i + additionalBitsToConvert);
+                return 0;
+            }
+            string acCodeValue = binaryStringBuilder.ToString().Substring(i, additionalBitsToConvert);
+            binaryStringBuilder.Remove(0, i + additionalBitsToConvert);
+            if (acCodeValue.StartsWith("0"))
+                return ~Convert.ToInt32(acCodeValue, 2);
+            return Convert.ToInt32(acCodeValue, 2);
+        }
+
+        private decimal GetLuminanceDC(DHT lastDHT, StringBuilder binaryStringBuilder)
+        {
+            DHT.DHTStruct dcLuminanceTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.DC && t.numberOfHT == 0);
+
+            int i = 0;
+            while (!dcLuminanceTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))
+                i++;
+
+            int additionalBitsToConvert = dcLuminanceTable.bitMaps[binaryStringBuilder.ToString().Substring(0, i)];
+            if (additionalBitsToConvert == 0)
+            {
+                binaryStringBuilder.Remove(0, i + additionalBitsToConvert);
+                return 0;
+            }
+            string dcCodeValue = binaryStringBuilder.ToString().Substring(i, additionalBitsToConvert);
+            binaryStringBuilder.Remove(0, i + additionalBitsToConvert);
+            if (dcCodeValue.StartsWith("0"))
+                return ~Convert.ToInt32(dcCodeValue, 2);
+            return Convert.ToInt32(dcCodeValue, 2);
         }
     }
 }
