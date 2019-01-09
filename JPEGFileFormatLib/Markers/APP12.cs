@@ -1,46 +1,48 @@
-﻿using System;
+﻿using JPEGFileFormatLib.Markers;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JPEGFileFormatLib
+namespace JPEGFileFormatLib.Markers
 {
     /// <summary>
-    /// FF EC
+    /// Could be PictureInfo tags or Ducky tags. More info : https://sno.phy.queensu.ca/~phil/exiftool/TagNames/APP12.html
     /// </summary>
-    internal class APP12
+    internal class APP12 : JpegMarkerBase
     {
-        UInt16 length;
-        string tag;
-        UInt32 quality;
-        string comment;
-        string copyright;
+        public string Tag { get; set; }
+        public uint Quality { get; set; }
+        public string Comment { get; set; }
+        public string Copyright { get; set; }
 
-        internal APP12(BinaryReaderFlexiEndian reader)
+        internal APP12() : base(JpegMarker.APP12)
         {
-            length = reader.ReadUInt16(); //Length of structure
+        }
 
+        public override void ReadExtensionData(BinaryReaderFlexiEndian reader)
+        {
             while (reader.PeekChar() != 0x00)
-                tag += reader.ReadChar();
+                Tag += reader.ReadChar();
 
-            UInt16 tagId = reader.ReadUInt16();
+            ushort tagId = reader.ReadUInt16();
 
             while (tagId != 0)
             {
-                UInt16 dataLen = reader.ReadUInt16();
+                ushort dataLen = reader.ReadUInt16();
 
                 switch (tagId)
                 {
                     case 1: //Quality
-                        quality = reader.ReadUInt32();
+                        Quality = reader.ReadUInt32();
                         break;
                     case 2: //Comment
-                        comment = reader.ReadString();
+                        Comment = reader.ReadString();
                         break;
                     case 3: //Copyright
-                        copyright = reader.ReadString();
+                        Copyright = reader.ReadString();
                         break;
                     default:
                         break;

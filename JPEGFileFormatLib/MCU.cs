@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JPEGFileFormatLib.Markers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -41,7 +42,7 @@ namespace JPEGFileFormatLib
 
             internal void ReadDC(DHT lastDHT, StringBuilder binaryStringBuilder)
             {
-                DHT.DHTStruct dcTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.DC && t.numberOfHT == componentId);
+                DHT.DHTStruct dcTable = lastDHT.Tables.First(t => t.TableType == DHT.HuffmanTableType.DC && t.NumberOfHuffmanTable == componentId);
 
                 int i = 1;
                 while (!dcTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))
@@ -71,7 +72,7 @@ namespace JPEGFileFormatLib
                 //int coeffRemoved = 0;
                 do
                 {
-                    DHT.DHTStruct acTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.AC && t.numberOfHT == componentId);
+                    DHT.DHTStruct acTable = lastDHT.Tables.First(t => t.TableType == DHT.HuffmanTableType.AC && t.NumberOfHuffmanTable == componentId);
 
                     int i = 1;
                     while (!acTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))

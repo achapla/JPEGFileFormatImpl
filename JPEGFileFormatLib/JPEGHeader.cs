@@ -1,5 +1,7 @@
-﻿using System;
+﻿using JPEGFileFormatLib.Markers;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -8,33 +10,36 @@ namespace JPEGFileFormatLib
 {
     internal class JPEGHeader
     {
-        UInt16 soi;
-        UInt16 marker;
-        UInt16 markerSize;
-        UInt32 identifier;
+        //readonly ushort soi;
+        //readonly ushort marker;
+        //readonly ushort markerSize;
+        //readonly uint identifier;
 
-        public bool IsJPEG { get { return soi == 0xFFD8 && (marker & 0xFFE0) == 0xFFE0; } }
-        public bool IsEXIF { get { return IsJPEG && identifier == 0x45786966; } }
-        public bool IsJFIF { get { return IsJPEG && identifier == 0x4A464946; } }
+        //public bool IsJPEG { get { return soi == 0xFFD8 && (marker & 0xFFE0) == 0xFFE0; } }
+        //public bool IsEXIF { get { return IsJPEG && identifier == 0x45786966; } }
+        //public bool IsJFIF { get { return IsJPEG && identifier == 0x4A464946; } }
 
-        List<object> objs = new List<object>();
+        readonly List<IJpegMarker> Markers = new List<IJpegMarker>();
 
         internal void ReadHeader(BinaryReaderFlexiEndian reader)
         {
             Console.WriteLine("Reading header...");
 
-            reader.UseBigEndian = true;
-            reader.BaseStream.Position = 0;
-            soi = reader.ReadUInt16();  // Start of Image (SOI) marker (FFD8)
-            marker = reader.ReadUInt16(); // JFIF marker (FFE0) EXIF marker (FFE1)
-            markerSize = reader.ReadUInt16(); // size of marker data (incl. marker)
-            identifier = reader.ReadUInt32(); // JFIF 0x4649464a or Exif  0x66697845
+            //reader.UseBigEndian = true; //Data in jpeg files will always be in big endian format. Although EXIF marker can have little endian data for that particular segment only.
+            ////TODO: Remove below part to standardize code
+            //reader.BaseStream.Position = 0;
+            //soi = reader.ReadUInt16();  // Start of Image (SOI) marker (FFD8)
+            //marker = reader.ReadUInt16(); // JFIF marker (FFE0) EXIF marker (FFE1)
+            //markerSize = reader.ReadUInt16(); // size of marker data (incl. marker)
+            //identifier = reader.ReadUInt32(); // JFIF 0x4649464a or Exif  0x66697845
 
-            byte[] tagMarker = new byte[2];
-            while (reader.PeekChar() == 0x00)
-                tagMarker[0] = reader.ReadByte(); //Discard parity
-            reader.BaseStream.Position = 2;
+            //byte[] tagMarker = new byte[2];
+            //while (reader.PeekChar() == 0x00)
+            //    tagMarker[0] = reader.ReadByte(); //Discard parity
+            //reader.BaseStream.Position = 0;
             ReadStructure(reader);
+            DecodeOptimized(reader);
+            //DecodeData();
         }
 
         private void ReadStructure(BinaryReaderFlexiEndian reader)
@@ -42,63 +47,109 @@ namespace JPEGFileFormatLib
             Console.WriteLine("Reading structure...");
             while (reader.BaseStream.Position != reader.BaseStream.Length)
             {
-                JFIFMarkers markerTag = (JFIFMarkers)reader.ReadUInt16();
-                Console.WriteLine($"Current marker tag : {markerTag.ToString()}");
+                JpegMarker markerTag = (JpegMarker)reader.ReadUInt16();
+                Console.WriteLine($"Current marker tag : {markerTag.ToString()}\t{reader.BaseStream.Position}");
+                IJpegMarker currentMarker = null;
                 switch (markerTag)
                 {
-                    case JFIFMarkers.APP0:
-                        objs.Add(new APP0(reader));
+                    case JpegMarker.APP0:
+                        currentMarker = new APP0();
                         break;
-                    case JFIFMarkers.APP1:
-                        objs.Add(new APP1(reader));
+                    case JpegMarker.APP1:
+                        currentMarker = new APP1();
                         break;
-                    case JFIFMarkers.APP2:
-                        objs.Add(new APP2(reader));
+                    case JpegMarker.APP2:
+                        currentMarker = new APP2();
                         break;
-                    case JFIFMarkers.APP12:
-                        objs.Add(new APP12(reader));
+                    case JpegMarker.APP12:
+                        currentMarker = new APP12();
                         break;
-                    case JFIFMarkers.APP13:
-                        objs.Add(new APP13(reader));
+                    case JpegMarker.APP13:
+                        currentMarker = new APP13();
                         break;
-                    case JFIFMarkers.APP14:
-                        objs.Add(new APP14(reader));
+                    case JpegMarker.APP14:
+                        currentMarker = new APP14();
                         break;
-                    case JFIFMarkers.DRI:
-                        objs.Add(new DRI(reader));
+                    case JpegMarker.DRI:
+                        currentMarker = new DRI();
                         break;
-                    case JFIFMarkers.DQT:
-                        objs.Add(new DQT(reader));
+                    case JpegMarker.DQT:
+                        currentMarker = new DQT();
                         break;
-                    case JFIFMarkers.DHT:
-                        objs.Add(new DHT(reader));
+                    case JpegMarker.DHT:
+                        currentMarker = new DHT();
                         break;
-                    case JFIFMarkers.COM:
-                        objs.Add(new COM(reader));
+                    case JpegMarker.COM:
+                        currentMarker = new COM();
                         break;
-                    case JFIFMarkers.SOS:
-                        objs.Add(new SOS(reader));
+                    case JpegMarker.SOS:
+                        currentMarker = new SOS();
                         break;
-                    case JFIFMarkers.SOI:
+                    case JpegMarker.SOI:
+                        currentMarker = new SOI();
                         break;
-                    case JFIFMarkers.EOI:
+                    case JpegMarker.EOI:
+                        currentMarker = new EOI();
                         break;
-                    case JFIFMarkers.SOF0:
-                        objs.Add(new SOF0(reader));
+                    case JpegMarker.SOF0:
+                        currentMarker = new SOF0();
                         break;
                     default:
-                        objs.Add(new QuantizationTable(reader));
-                        Console.WriteLine("New tag : {0}", markerTag);
+                        currentMarker = new UnknownMarker(markerTag);
+                        Console.WriteLine("================================New tag : {0}", markerTag);
                         break;
                 }
-                //JPEGQuantizationTable dqt = new JPEGQuantizationTable(reader);
-            }
-            //decode https://www.impulseadventure.com/photo/jpeg-huffman-coding.html
-            SOS lastScan = (SOS)objs.Last(obj => obj.GetType().Equals(typeof(SOS)));
-            DHT lastDHT = (DHT)objs.Last(obj => obj.GetType().Equals(typeof(DHT)));
-            lastDHT.GenerateBitArrayMap();
+                if (currentMarker != null)
+                    currentMarker.Read(reader);
+                Markers.Add(currentMarker);
 
-            using (MemoryStream cdms = new MemoryStream(lastScan.compressedData))
+                if (currentMarker is SOS) //Break when compressed data starts
+                    break;
+            }
+        }
+
+        private void DecodeOptimized(BinaryReaderFlexiEndian reader)
+        {
+            if (Markers.OfType<APP1>().Count() == 0)
+                return;
+
+            List<DHT.DHTStruct> huffmanTables = Markers.OfType<DHT>().SelectMany(d => d.Tables).ToList();
+            DHT.DHTStruct dcLuminanceTable = huffmanTables.FirstOrDefault(ht => ht.NumberOfHuffmanTable == 0 && ht.TableType == DHT.HuffmanTableType.DC);
+            DHT.DHTStruct acLuminanceTable = huffmanTables.FirstOrDefault(ht => ht.NumberOfHuffmanTable == 0 && ht.TableType == DHT.HuffmanTableType.AC);
+            DHT.DHTStruct dcChrominanceTable = huffmanTables.FirstOrDefault(ht => ht.NumberOfHuffmanTable == 1 && ht.TableType == DHT.HuffmanTableType.DC);
+            DHT.DHTStruct acChrominanceTable = huffmanTables.FirstOrDefault(ht => ht.NumberOfHuffmanTable == 1 && ht.TableType == DHT.HuffmanTableType.AC);
+            DRI restartInterval = Markers.OfType<DRI>().FirstOrDefault();
+
+            List<OptimizedMCU> mCUs = new List<OptimizedMCU>();
+
+            DateTime st = DateTime.Now;
+            while (reader.BaseStream.Position != reader.BaseStream.Length)
+            {
+                if (mCUs.Count == 8281)
+                    Debugger.Break();
+
+                //TODO Check for last blocks when reader ends
+                OptimizedMCU optimizedMCU = new OptimizedMCU(dcLuminanceTable, acLuminanceTable, dcChrominanceTable, acChrominanceTable);
+                optimizedMCU.Read(reader);
+                mCUs.Insert(0, optimizedMCU);
+
+                if (restartInterval != null && mCUs.Count % restartInterval.RestartInterval == 0)
+                {
+                    Console.WriteLine((DateTime.Now - st).TotalMilliseconds);
+                    st = DateTime.Now;
+                    restartInterval.ProcessCurrent(reader);
+                }
+            }
+            Console.WriteLine((DateTime.Now - st).TotalMilliseconds);
+        }
+
+        private void DecodeData()
+        {
+            //decode https://www.impulseadventure.com/photo/jpeg-huffman-coding.html
+            SOS lastScan = (SOS)Markers.Last(obj => obj.GetType().Equals(typeof(SOS)));
+            DHT lastDHT = (DHT)Markers.Last(obj => obj.GetType().Equals(typeof(DHT)));
+
+            using (MemoryStream cdms = new MemoryStream(lastScan.CompressedData))
             {
                 bool isEOF = false;
                 StringBuilder binaryStringBuilder = new StringBuilder();
@@ -210,7 +261,7 @@ namespace JPEGFileFormatLib
 
         private decimal GetChrominanceAC(DHT lastDHT, StringBuilder binaryStringBuilder)
         {
-            DHT.DHTStruct acChrominanceTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.AC && t.numberOfHT == 1);
+            DHT.DHTStruct acChrominanceTable = lastDHT.Tables.First(t => t.TableType == DHT.HuffmanTableType.AC && t.NumberOfHuffmanTable == 1);
 
             int i = 0;
             while (!acChrominanceTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))
@@ -231,7 +282,7 @@ namespace JPEGFileFormatLib
 
         private decimal GetChrominanceDC(DHT lastDHT, StringBuilder binaryStringBuilder)
         {
-            DHT.DHTStruct dcChrominanceTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.DC && t.numberOfHT == 1);
+            DHT.DHTStruct dcChrominanceTable = lastDHT.Tables.First(t => t.TableType == DHT.HuffmanTableType.DC && t.NumberOfHuffmanTable == 1);
 
             int i = 0;
             while (!dcChrominanceTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))
@@ -252,7 +303,7 @@ namespace JPEGFileFormatLib
 
         private decimal GetLuminanceAC(DHT lastDHT, StringBuilder binaryStringBuilder)
         {
-            DHT.DHTStruct acLuminanceTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.AC && t.numberOfHT == 0);
+            DHT.DHTStruct acLuminanceTable = lastDHT.Tables.First(t => t.TableType == DHT.HuffmanTableType.AC && t.NumberOfHuffmanTable == 0);
 
             int i = 0;
             while (!acLuminanceTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))
@@ -273,7 +324,7 @@ namespace JPEGFileFormatLib
 
         private decimal GetLuminanceDC(DHT lastDHT, StringBuilder binaryStringBuilder)
         {
-            DHT.DHTStruct dcLuminanceTable = lastDHT.tables.First(t => t.TableType == DHT.HuffmanTableType.DC && t.numberOfHT == 0);
+            DHT.DHTStruct dcLuminanceTable = lastDHT.Tables.First(t => t.TableType == DHT.HuffmanTableType.DC && t.NumberOfHuffmanTable == 0);
 
             int i = 0;
             while (!dcLuminanceTable.bitMaps.ContainsKey(binaryStringBuilder.ToString().Substring(0, i)))

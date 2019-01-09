@@ -1,33 +1,37 @@
-﻿using System;
+﻿using JPEGFileFormatLib.Markers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JPEGFileFormatLib
+namespace JPEGFileFormatLib.Markers
 {
-    internal class APP2
+    /// <summary>
+    /// flashPix extension data. More data: https://sno.phy.queensu.ca/~phil/exiftool/TagNames/JPEG.html
+    /// </summary>
+    internal class APP2 : JpegMarkerBase
     {
-        long start;
-        UInt16 length;
-        string tag;
-        byte blockNumber;
-        byte blockTotal;
-        byte[] data;
+        public string Tag { get; set; }
+        public byte BlockNumber { get; set; }
+        public byte BlockTotal { get; set; }
+        public byte[] Data { get; set; }
 
-        internal APP2(BinaryReaderFlexiEndian reader)
+        internal APP2() : base(JpegMarker.APP2)
         {
-            start = reader.BaseStream.Position;
-            length = reader.ReadUInt16();
+        }
 
+        public override void ReadExtensionData(BinaryReaderFlexiEndian reader)
+        {
             while (reader.PeekChar() != 0)
-                tag += reader.ReadChar();
+                Tag += reader.ReadChar();
 
             byte extraByte = reader.ReadByte(); //Discard null terminator
 
-            blockNumber = reader.ReadByte();
-            blockTotal = reader.ReadByte();
-            data = reader.ReadBytes((int)(length + start - reader.BaseStream.Position));
+            BlockNumber = reader.ReadByte();
+            BlockTotal = reader.ReadByte();
+            //TODO Parse ICC Profiles, flashPix data
+            Data = reader.ReadBytes((int)(MarkerSize + StartPosition - reader.BaseStream.Position));
         }
     }
 }

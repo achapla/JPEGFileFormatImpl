@@ -3,47 +3,101 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace JPEGFileFormatLib
+namespace JPEGFileFormatLib.Markers
 {
-    internal class DHT
+    internal class DHT : JpegMarkerBase
     {
-        readonly UInt16 length;
-        public List<DHTStruct> tables = new List<DHTStruct>();
+        public List<DHTStruct> Tables { get; set; } = new List<DHTStruct>();
 
-        internal DHT(BinaryReaderFlexiEndian reader)
+        internal DHT() : base(JpegMarker.DHT)
         {
-            length = reader.ReadUInt16();
-            long endOfMarker = reader.BaseStream.Position + length - 2;
-            while (reader.BaseStream.Position != endOfMarker)
-                tables.Add(new DHTStruct(reader));
         }
 
-        internal void GenerateBitArrayMap()
+        public override void ReadExtensionData(BinaryReaderFlexiEndian reader)
         {
-            foreach (DHTStruct table in tables)
-            {
-                table.GenerateBitArrayMap();
-            }
+            while (reader.BaseStream.Position != reader.BaseStream.Length)
+                Tables.Add(new DHTStruct(reader));
         }
 
         internal class DHTStruct
         {
-            internal readonly byte HTInformation;
-            internal byte[] data;
-            internal byte numberOfHT { get { return (byte)(HTInformation & 0x0F); } }
-            internal readonly byte typeOfHT; //type of HT, 0 = DC / Lossless Table, 1 = AC table
-            internal HuffmanTableType TableType { get { return (HuffmanTableType)typeOfHT; } }
-            internal byte[] numderOfSymbols;
+            /// <summary>
+            /// bit 0..3 : number of HT (0..3, otherwise error)
+            /// bit 4    : type of HT, 0 = DC table, 1 = AC table
+            /// bit 5..7 : not used, must be 0
+            /// </summary>
+            internal byte HuffmanTableInformation { get; set; }
+            /// <summary>
+            /// These are real values to map with huffman code.
+            /// </summary>
+            internal byte[] DataCodes { get; set; }
+            /// <summary>
+            /// Indicates number of current huffman table.
+            /// </summary>
+            internal byte NumberOfHuffmanTable { get { return (byte)(HuffmanTableInformation & 0x0F); } }
+            /// <summary>
+            /// Identifies type of huffman table.
+            /// </summary>
+            internal HuffmanTableType TableType { get { return ((HuffmanTableInformation >> 4) & 0x1) == 0x1 ? HuffmanTableType.AC : HuffmanTableType.DC; } }
+            /// <summary>
+            /// Defines that how many symbols are present for each bit(index) array.
+            /// </summary>
+            internal byte[] NumderOfSymbolsOnEachBitLength { get; set; }
             internal Dictionary<string, int> bitMaps = new Dictionary<string, int>();
+            /// <summary>
+            /// Maps huffman code with real value from DataCodes array.
+            /// </summary>
+            internal Dictionary<ushort, int> CodeTable { get; set; }
+            internal int MinCodeLength { get; private set; }
 
             internal DHTStruct(BinaryReaderFlexiEndian reader)
             {
-                HTInformation = reader.ReadByte();
-                BitArray HTInformationBitArray = new BitArray(new byte[] { HTInformation });
-                typeOfHT = (byte)(HTInformationBitArray.Get(4) ? 1 : 0);
-                numderOfSymbols = reader.ReadBytes(16);
-                var sumOfSymbols = numderOfSymbols.Sum(val => val);
-                data = reader.ReadBytes(sumOfSymbols);
+                HuffmanTableInformation = reader.ReadByte();
+                NumderOfSymbolsOnEachBitLength = reader.ReadBytes(16);
+                DataCodes = reader.ReadBytes(NumderOfSymbolsOnEachBitLength.Sum(val => val));
+                CodeTable = new Dictionary<ushort, int>(DataCodes.Length);
+                GenerateBitArrayMap();
+                GenerateOptimizedTable();
+            }
+
+            internal void GenerateOptimizedTable()
+            {
+                Queue<ushort> binaryTreeQueue = new Queue<ushort>();
+                int l = 0;
+                bool minCodeLengthFound = false;
+
+                foreach (var symbolItem in NumderOfSymbolsOnEachBitLength)
+                {
+                    if (l == DataCodes.Length) //If no more symbols break
+                        break;
+
+                    if (binaryTreeQueue.Count == 0)
+                    {
+                        if (!minCodeLengthFound)
+                            ++MinCodeLength;
+                        binaryTreeQueue.Enqueue(0);
+                        binaryTreeQueue.Enqueue(1);
+                    }
+                    else
+                    {
+                        if (!minCodeLengthFound)
+                            ++MinCodeLength;
+                        int nextQueueLength = binaryTreeQueue.Count * 2; //We can expect to double queue size
+                        while (nextQueueLength > binaryTreeQueue.Count)
+                        {
+                            ushort code = binaryTreeQueue.Dequeue();
+                            binaryTreeQueue.Enqueue((ushort)(code << 1));
+                            binaryTreeQueue.Enqueue((ushort)((code << 1) | 0x1));
+                        }
+                    }
+
+                    //Now assign codes to respective values
+                    for (int i = 0; i < symbolItem; i++)
+                    {
+                        minCodeLengthFound = true;
+                        CodeTable.Add(binaryTreeQueue.Dequeue(), DataCodes[l++]);
+                    }
+                }
             }
 
             internal void GenerateBitArrayMap()
@@ -51,9 +105,9 @@ namespace JPEGFileFormatLib
                 Dictionary<string, int> bitmap = new Dictionary<string, int>();
                 int l = 0;
 
-                foreach (var symbolItem in numderOfSymbols)
+                foreach (var symbolItem in NumderOfSymbolsOnEachBitLength)
                 {
-                    if (l == data.Length)
+                    if (l == DataCodes.Length)
                         break;
                     if (bitmap.Count == 0)
                     {
@@ -74,7 +128,7 @@ namespace JPEGFileFormatLib
                     {
                         KeyValuePair<string, int> firstOpen = bitmap.First();
                         bitmap.Remove(firstOpen.Key);
-                        bitMaps.Add(firstOpen.Key, data[l++]);
+                        bitMaps.Add(firstOpen.Key, DataCodes[l++]);
                     }
                 }
             }

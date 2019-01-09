@@ -5,41 +5,50 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JPEGFileFormatLib
+namespace JPEGFileFormatLib.Markers
 {
-    internal class DQT
+    internal class DQT : JpegMarkerBase
     {
-        UInt16 length;
-        List<DQTStruct> tables = new List<DQTStruct>();
+        public DQTStruct[] QuantizationTables { get; set; }
 
-        internal DQT(BinaryReaderFlexiEndian reader)
+        internal DQT() : base(JpegMarker.DQT)
         {
-            length = reader.ReadUInt16();
-
-            for (int i = 0; i < (length - 2) / 65; i++)
-                tables.Add(new DQTStruct(reader));
         }
 
+        public override void ReadExtensionData(BinaryReaderFlexiEndian reader)
+        {
+            QuantizationTables = new DQTStruct[(MarkerSize - 2) / 65];
+            for (int i = 0; i < QuantizationTables.Length; i++)
+                QuantizationTables[i] = new DQTStruct(reader);
+        }
+
+        /// <summary>
+        /// http://vip.sugovica.hu/Sardi/kepnezo/JPEG%20File%20Layout%20and%20Format.htm
+        /// </summary>
         internal class DQTStruct
         {
-            byte QTInformation; // 0 : Luminance, 1 : Chrominance
-            byte[] data;
-            byte numberOfQT;
-            byte precision { get { return (byte)(QTInformation & 0xF0); } }
+            /// <summary>
+            /// bit 0..3: number of QT (0..3, otherwise error)
+            /// bit 4..7: precision of QT, 0 = 8 bit, otherwise 16 bit
+            /// </summary>
+            public byte QuantizationTableInformation { get; set; } // 0 : Luminance, 1 : Chrominance
+            /// <summary>
+            /// Array contain quantization table data values.
+            /// </summary>
+            public byte[] Data { get; set; }
+            /// <summary>
+            /// Defines index of current quantization table. TODO: Fix this later.
+            /// </summary>
+            public byte NumberOfQuantizationTable { get { return (byte)(QuantizationTableInformation & 0x0F); } }
+            /// <summary>
+            /// Used to identify how many bit of length is for each value. 1 = 16 bits, 0 = 8 bits TODO: Fix this later.
+            /// </summary>
+            public byte Precision { get { return (byte)(QuantizationTableInformation & 0xF0); } }
 
             internal DQTStruct(BinaryReaderFlexiEndian reader)
             {
-                QTInformation = reader.ReadByte();
-                BitArray HTInformationBitArray = new BitArray(new byte[] { QTInformation });
-                for (byte j = 0; j < 4; j++)
-                {
-                    if (HTInformationBitArray.Get(j))
-                    {
-                        numberOfQT = (byte)(j + 1);
-                        break;
-                    }
-                }
-                data = reader.ReadBytes(64 * (precision + 1));
+                QuantizationTableInformation = reader.ReadByte();
+                Data = reader.ReadBytes(64 * (Precision + 1));
             }
         }
     }

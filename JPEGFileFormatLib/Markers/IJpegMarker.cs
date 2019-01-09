@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,7 +9,9 @@ namespace JPEGFileFormatLib.Markers
 {
     internal interface IJpegMarker
     {
-        UInt16 Marker { get; set; }
-        UInt16 MarkerSize { get; set; }
+        long StartPosition { get; }
+        JpegMarker Marker { get; }
+        ushort MarkerSize { get; }
+        void Read(BinaryReaderFlexiEndian reader);
     }
 }

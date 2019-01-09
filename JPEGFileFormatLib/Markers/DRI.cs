@@ -4,22 +4,36 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JPEGFileFormatLib
+namespace JPEGFileFormatLib.Markers
 {
     /// <summary>
     /// FF DD - Define Restart Interval
     /// </summary>
-    internal class DRI
+    internal class DRI : JpegMarkerBase
     {
-        long start;
-        UInt16 length;
-        UInt16 RestartInterval; //0 means no restart interval
+        /// <summary>
+        /// This is in units of MCU blocks, means that every n MCU blocks a RSTn marker can be found. The first marker will be RST0, then RST1 etc, after RST7 repeating from RST0. 0 value means no restart interval.
+        /// </summary>
+        public ushort RestartInterval { get; set; }
 
-        internal DRI(BinaryReaderFlexiEndian reader)
+        internal DRI() : base(JpegMarker.DRI)
         {
-            start = reader.BaseStream.Position;
-            length = reader.ReadUInt16();
+        }
+
+        public override void ReadExtensionData(BinaryReaderFlexiEndian reader)
+        {
             RestartInterval = reader.ReadUInt16();
+        }
+
+        public void ProcessCurrent(BinaryReaderFlexiEndian reader)
+        {
+            reader.FillBitData();
+            reader.DiscardFirstOrphanByte();
+
+            bool isRestartMarker = (reader.TakeBits(16) & 0xFFD0) == 0xFFD0;
+            if (!isRestartMarker)
+                throw new Exception();
+            reader.RemoveBits(16);
         }
     }
 }

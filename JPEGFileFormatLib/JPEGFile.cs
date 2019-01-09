@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace JPEGFileFormatLib
 {
+    /// <summary>
+    /// https://www.w3.org/Graphics/JPEG/itu-t81.pdf
+    /// </summary>
     public class JPEGFile : IDisposable
     {
         public string FilePath;
@@ -16,10 +19,11 @@ namespace JPEGFileFormatLib
 
         public JPEGFile(string filePath)
         {
-            this.FilePath = filePath;
+            FilePath = filePath;
 
             _header = new JPEGHeader();
-            _reader = new BinaryReaderFlexiEndian(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
+            _reader = new BinaryReaderFlexiEndian(new MemoryStream(File.ReadAllBytes(filePath)));
+            _reader.UseBigEndian = true;
 
             _header.ReadHeader(_reader);
         }

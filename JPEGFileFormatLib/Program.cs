@@ -12,12 +12,32 @@ namespace JPEGFileFormatLib
         static void Main(string[] args)
         {
             CalculationFunction();
-            //JPEGFile j = new JPEGFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples", "kiss-smiley-pillow.jpg"));
-            //JPEGFile j = new JPEGFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples", "huff_simple0.jpg"));
-            JPEGFile j = new JPEGFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples", "fig2.jpg"));
-            //JPEGFile j = new JPEGFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples", "test.jpg"));
-            //JPEGFile j = new JPEGFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples", "iron_man.jpg"));
-            //JPEGFile j = new JPEGFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples", "car.jpg"));
+            List<string> skipWhile = new List<string>();
+            skipWhile.Add("kiss-smiley-pillow.jpg");
+            skipWhile.Add("huff_simple0.jpg");
+            skipWhile.Add("fig2.jpg"); //EXIF
+            //skipWhile.Add("fig3.jpg"); //EXIF
+            skipWhile.Add("iron_man.jpg");
+            skipWhile.Add("car.jpg");
+            skipWhile.Add("img_1771_exif.jpg");
+            skipWhile.Add("Nikon_D70.jpg");
+            skipWhile = skipWhile.Select(s => s.ToLower()).ToList();
+            foreach (var imageFile in Directory.GetFiles(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples")))
+            {
+                if (!skipWhile.Contains(Path.GetFileName(imageFile.ToLower())))
+                {
+                    //DateTime st = DateTime.Now;
+                    //using (BinaryReader reader = new BinaryReader(new FileStream(imageFile, FileMode.Open, FileAccess.Read)))
+                    //{
+                    //    using (MemoryStream ms = new MemoryStream(reader.ReadBytes((int)reader.BaseStream.Length)))
+                    //    {
+                    //        ms.ReadByte();
+                    //    }
+                    //}
+                    //Console.WriteLine((DateTime.Now - st).TotalMilliseconds);
+                    new JPEGFile(imageFile);
+                }
+            }
         }
 
         private static void CalculationFunction()
@@ -35,7 +55,7 @@ namespace JPEGFileFormatLib
             double[,] destination = new double[8, 8];
 
             for (int i = 0; i < data.Length; i++)
-                destination[i % 8, i / 8] = (double)(data[i % 8, i / 8] - 128);
+                destination[i % 8, i / 8] = data[i % 8, i / 8] - 128;
 
             Print2DArray<double>(destination, "First Transformation");
 

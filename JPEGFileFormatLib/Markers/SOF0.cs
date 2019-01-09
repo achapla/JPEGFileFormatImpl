@@ -4,38 +4,40 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JPEGFileFormatLib
+namespace JPEGFileFormatLib.Markers
 {
     /// <summary>
     /// FF C0
     /// </summary>
-    internal class SOF0
+    internal class SOF0 : JpegMarkerBase
     {
-        UInt16 length;
-        byte precision; //bits/sample
-        UInt16 imageY;
-        UInt16 imageX;
-        byte numerOfComponents; //1 = Grey Scaled, 3 = Color YCbCr or YIQ, 4 = color CMYK
-        SOF0Component[] components;
+        public byte Precision { get; set; } //bits/sample
+        public ushort ImageY { get; set; }
+        public ushort ImageX { get; set; }
+        public byte NumerOfComponents { get; set; } //1 = Grey Scaled, 3 = Color YCbCr or YIQ, 4 = color CMYK
+        public SOF0Component[] Components { get; set; }
 
-        internal SOF0(BinaryReaderFlexiEndian reader)
+        public SOF0() : base(JpegMarker.SOF0)
         {
-            length = reader.ReadUInt16(); //(UInt16)(reader.ReadByte() * 256 + reader.ReadByte()); //Length of structure
-            precision = reader.ReadByte();
-            imageY = reader.ReadUInt16();
-            imageX = reader.ReadUInt16();
-            numerOfComponents = reader.ReadByte();
-            components = new SOF0Component[numerOfComponents];
+        }
 
-            for (int i = 0; i < components.Length; i++)
-                components[i] = new SOF0Component(reader);
+        public override void ReadExtensionData(BinaryReaderFlexiEndian reader)
+        {
+            Precision = reader.ReadByte();
+            ImageY = reader.ReadUInt16();
+            ImageX = reader.ReadUInt16();
+            NumerOfComponents = reader.ReadByte();
+            Components = new SOF0Component[NumerOfComponents];
+
+            for (int i = 0; i < Components.Length; i++)
+                Components[i] = new SOF0Component(reader);
         }
 
         internal class SOF0Component
         {
-            byte componentId;
-            byte samplingFactors; //Samp Fac=0x11 (Subsamp 1 x 1) (4:4:4)
-            byte quantizationTableNumber; //0x00 (Lum: Y), 0x01 (Chrom: Cb), 0x01 (Chrom: Cr)
+            readonly byte componentId;
+            readonly byte samplingFactors; //Samp Fac=0x11 (Subsamp 1 x 1) (4:4:4)
+            readonly byte quantizationTableNumber; //0x00 (Lum: Y), 0x01 (Chrom: Cb), 0x01 (Chrom: Cr)
             int vertical { get { return samplingFactors & 0x0F; } }
             int horizontal { get { return samplingFactors >> 4; } }
 

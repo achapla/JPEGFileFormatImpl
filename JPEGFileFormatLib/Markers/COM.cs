@@ -1,22 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace JPEGFileFormatLib
+﻿namespace JPEGFileFormatLib.Markers
 {
-    internal class COM
+    /// <summary>
+    /// Defines comment.
+    /// </summary>
+    internal class COM : JpegMarkerBase
     {
-        UInt16 length;
-        string comment;
+        public string Comment { get; set; }
 
-        internal COM(BinaryReaderFlexiEndian reader)
+        internal COM() : base(JpegMarker.COM)
         {
-            length = reader.ReadUInt16(); //Length of structure
+        }
 
+        public override void ReadExtensionData(BinaryReaderFlexiEndian reader)
+        {
             while (reader.PeekChar() != 0x00)
-                comment += reader.ReadChar();
+                Comment += reader.ReadChar();
 
             reader.ReadByte(); //Discard null terminator
         }
