@@ -58,8 +58,9 @@ namespace JPEGFileFormatLib.Markers
                 //Follows to thumbnail data
                 reader.UseBigEndian = true;
 
-                JPEGHeader thumbnailImage = new JPEGHeader();
-                thumbnailImage.ReadHeader(reader);
+                //TODO Parse thumbnail images
+                //JPEGHeader thumbnailImage = new JPEGHeader();
+                //thumbnailImage.ReadHeader(reader);
 
             }
             else

@@ -11,31 +11,36 @@ namespace JPEGFileFormatLib
     {
         static void Main(string[] args)
         {
-            CalculationFunction();
-            List<string> skipWhile = new List<string>();
-            skipWhile.Add("kiss-smiley-pillow.jpg");
-            skipWhile.Add("huff_simple0.jpg");
-            skipWhile.Add("fig2.jpg"); //EXIF
-            //skipWhile.Add("fig3.jpg"); //EXIF
-            skipWhile.Add("iron_man.jpg");
-            skipWhile.Add("car.jpg");
-            skipWhile.Add("img_1771_exif.jpg");
-            skipWhile.Add("Nikon_D70.jpg");
-            skipWhile = skipWhile.Select(s => s.ToLower()).ToList();
-            foreach (var imageFile in Directory.GetFiles(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples")))
+            Console.WindowHeight = 1;
+            Console.WindowWidth = 1;
+            //CalculationFunction();
+            //for (int i = 0; i < 10; i++)
             {
-                if (!skipWhile.Contains(Path.GetFileName(imageFile.ToLower())))
+                List<string> skipWhile = new List<string>();
+                //skipWhile.Add("kiss-smiley-pillow.jpg");
+                //skipWhile.Add("huff_simple0.jpg");
+                //skipWhile.Add("fig2.jpg"); //EXIF
+                //skipWhile.Add("fig3.jpg"); //EXIF
+                //skipWhile.Add("iron_man.jpg");
+                //skipWhile.Add("car.jpg");
+                //skipWhile.Add("img_1771_exif.jpg");
+                //skipWhile.Add("Nikon_D70.jpg");
+                skipWhile = skipWhile.Select(s => s.ToLower()).ToList();
+                foreach (var imageFile in Directory.GetFiles(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples")))
                 {
-                    //DateTime st = DateTime.Now;
-                    //using (BinaryReader reader = new BinaryReader(new FileStream(imageFile, FileMode.Open, FileAccess.Read)))
-                    //{
-                    //    using (MemoryStream ms = new MemoryStream(reader.ReadBytes((int)reader.BaseStream.Length)))
-                    //    {
-                    //        ms.ReadByte();
-                    //    }
-                    //}
-                    //Console.WriteLine((DateTime.Now - st).TotalMilliseconds);
-                    new JPEGFile(imageFile);
+                    if (!skipWhile.Contains(Path.GetFileName(imageFile.ToLower())))
+                    {
+                        //DateTime st = DateTime.Now;
+                        //using (BinaryReader reader = new BinaryReader(new FileStream(imageFile, FileMode.Open, FileAccess.Read)))
+                        //{
+                        //    using (MemoryStream ms = new MemoryStream(reader.ReadBytes((int)reader.BaseStream.Length)))
+                        //    {
+                        //        ms.ReadByte();
+                        //    }
+                        //}
+                        //Console.WriteLine((DateTime.Now - st).TotalMilliseconds);
+                        new JPEGFile(imageFile);
+                    }
                 }
             }
         }

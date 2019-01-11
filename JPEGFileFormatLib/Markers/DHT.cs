@@ -48,6 +48,7 @@ namespace JPEGFileFormatLib.Markers
             /// Maps huffman code with real value from DataCodes array.
             /// </summary>
             internal Dictionary<ushort, int> CodeTable { get; set; }
+            internal Dictionary<ushort, int> CodeLength { get; set; }
             internal int MinCodeLength { get; private set; }
 
             internal DHTStruct(BinaryReaderFlexiEndian reader)
@@ -56,6 +57,7 @@ namespace JPEGFileFormatLib.Markers
                 NumderOfSymbolsOnEachBitLength = reader.ReadBytes(16);
                 DataCodes = reader.ReadBytes(NumderOfSymbolsOnEachBitLength.Sum(val => val));
                 CodeTable = new Dictionary<ushort, int>(DataCodes.Length);
+                CodeLength = new Dictionary<ushort, int>(DataCodes.Length);
                 GenerateBitArrayMap();
                 GenerateOptimizedTable();
             }
@@ -63,12 +65,15 @@ namespace JPEGFileFormatLib.Markers
             internal void GenerateOptimizedTable()
             {
                 Queue<ushort> binaryTreeQueue = new Queue<ushort>();
-                int l = 0;
+                int dataCodeIndex = 0;
                 bool minCodeLengthFound = false;
+                int currentCodeLength = 0;
 
                 foreach (var symbolItem in NumderOfSymbolsOnEachBitLength)
                 {
-                    if (l == DataCodes.Length) //If no more symbols break
+                    ++currentCodeLength;
+
+                    if (dataCodeIndex == DataCodes.Length) //If no more symbols break
                         break;
 
                     if (binaryTreeQueue.Count == 0)
@@ -95,7 +100,9 @@ namespace JPEGFileFormatLib.Markers
                     for (int i = 0; i < symbolItem; i++)
                     {
                         minCodeLengthFound = true;
-                        CodeTable.Add(binaryTreeQueue.Dequeue(), DataCodes[l++]);
+                        ushort codeValue = binaryTreeQueue.Dequeue();
+                        CodeTable.Add(codeValue, DataCodes[dataCodeIndex++]);
+                        CodeLength.Add(codeValue, currentCodeLength);
                     }
                 }
             }

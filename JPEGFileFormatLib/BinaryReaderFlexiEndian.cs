@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -16,22 +17,28 @@ namespace JPEGFileFormatLib
     {
         internal bool UseBigEndian { get; set; }
         internal ulong DataBuffer { get; set; }
+        internal ulong DataBuffer2 { get { return DataBuffer >> removedBits; } }
         private int removedBits = 64;
+        private int bytesToScan = 0;
 
         public BinaryReaderFlexiEndian(System.IO.Stream stream) : base(stream) { }
 
         public void FillBitData()
         {
+            if (removedBits < 8)
+                return;
+
             if (BaseStream.Length - BaseStream.Position < removedBits / 8)
                 removedBits = removedBits % 8;
 
+            bytesToScan += removedBits / 8;
             switch (removedBits / 8)
             {
                 case 8:
                     DataBuffer = ReadUInt64();
                     break;
                 case 4:
-                    DataBuffer = DataBuffer | ReadUInt32() << (removedBits % 8);
+                    DataBuffer = DataBuffer | ((ulong)ReadUInt32() << (removedBits % 8));
                     break;
                 case 3:
                     DataBuffer = DataBuffer | (uint)(ReadUInt16() << ((removedBits % 8) + 8)) | (uint)(ReadByte() << (removedBits % 8));
@@ -47,52 +54,34 @@ namespace JPEGFileFormatLib
             }
             removedBits = removedBits % 8;
 
-            RemoveStuffByte();
+            if (bytesToScan >= 2)
+                RemoveStuffByte();
         }
 
         private void RemoveStuffByte()
         {
-            //int shiftedByte = removedBits;
-            //while (shiftedByte <= 56)
-            //{
-            //    if ((DataBuffer >> shiftedByte & 0x0000FFFF) == 0x0000FF00)
-            //    {
-            //        ulong temp = DataBuffer >> (shiftedByte + 8);
-            //        ulong temp1 = DataBuffer << (64 - shiftedByte) >> (64 - shiftedByte);
-            //        if (shiftedByte == 0) //To handle special case when data shifted by size of data nothing happends, it should be 0
-            //            temp1 = 0;
-            //        ulong temp2 = temp << shiftedByte;
-            //        ulong temp3 = temp1 | temp2;
-            //        ulong temp4 = temp3 << 8;
-            //        DataBuffer = temp4;
-            //        removedBits = removedBits + 8;
-            //        FillBitData();
-            //        break;
-            //    }
-            //    shiftedByte += 8;
-            //}
+            ulong originalDataBufferValue = DataBuffer >> removedBits;
+            ulong cnst = 0xFF00ul << ((bytesToScan - 2) * 8);
+            ulong mask = 0xFFFFul << ((bytesToScan - 2) * 8);
 
-            //if (DataBuffer != DataBuffer)
-            //    return;
-            ulong originalDataBufferValue = DataBuffer;
-            originalDataBufferValue = originalDataBufferValue >> removedBits;
-            ulong cnst = 0xFF00u;
-            ulong mask = 0xFFFFu;
-            int moved = 0;
-            while (moved <= 48)
+            while ((mask & 0xFFFF) != 0xFFFF)
             {
                 if ((originalDataBufferValue & mask) == cnst)
                 {
-                    originalDataBufferValue = (originalDataBufferValue & (ulong.MaxValue << (moved + 8))) | ((originalDataBufferValue & ~(ulong.MaxValue << moved)) << 8);
+                    int byteIndexToRemoveFromRight = bytesToScan - 2;
+                    ulong leftPart = originalDataBufferValue & (ulong.MaxValue << (byteIndexToRemoveFromRight * 8));
+                    ulong rightPart = originalDataBufferValue & ~(ulong.MaxValue << (byteIndexToRemoveFromRight * 8));
+                    rightPart = rightPart << 8;
+                    originalDataBufferValue = leftPart | rightPart;
                     DataBuffer = originalDataBufferValue << removedBits;
                     removedBits = removedBits + 8;
+                    bytesToScan -= 2;
                     FillBitData();
                     break;
                 }
-
-                cnst = cnst << 8;
-                mask = mask << 8;
-                moved += 8;
+                mask = mask >> 8;
+                cnst = cnst >> 8;
+                --bytesToScan;
             }
         }
 
@@ -100,6 +89,11 @@ namespace JPEGFileFormatLib
         public ushort TakeBits(int length)
         {
             return (ushort)(DataBuffer >> (64 - length));
+        }
+
+        public bool IsEOF()
+        {
+            return (((DataBuffer2 >> 48) & 0xFFFF) == 0xFFD9) || (((DataBuffer2 >> 40) & 0xFFFF) == 0xFFD9) || (((DataBuffer2 >> 32) & 0xFFFF) == 0xFFD9);
         }
 
         public ulong RemoveBits(int length)

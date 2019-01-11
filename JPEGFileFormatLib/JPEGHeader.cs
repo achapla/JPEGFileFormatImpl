@@ -110,8 +110,8 @@ namespace JPEGFileFormatLib
 
         private void DecodeOptimized(BinaryReaderFlexiEndian reader)
         {
-            if (Markers.OfType<APP1>().Count() == 0)
-                return;
+            //if (Markers.OfType<APP1>().Count() == 0)
+            //    return;
 
             List<DHT.DHTStruct> huffmanTables = Markers.OfType<DHT>().SelectMany(d => d.Tables).ToList();
             DHT.DHTStruct dcLuminanceTable = huffmanTables.FirstOrDefault(ht => ht.NumberOfHuffmanTable == 0 && ht.TableType == DHT.HuffmanTableType.DC);
@@ -119,24 +119,27 @@ namespace JPEGFileFormatLib
             DHT.DHTStruct dcChrominanceTable = huffmanTables.FirstOrDefault(ht => ht.NumberOfHuffmanTable == 1 && ht.TableType == DHT.HuffmanTableType.DC);
             DHT.DHTStruct acChrominanceTable = huffmanTables.FirstOrDefault(ht => ht.NumberOfHuffmanTable == 1 && ht.TableType == DHT.HuffmanTableType.AC);
             DRI restartInterval = Markers.OfType<DRI>().FirstOrDefault();
+            SOF0 imageInfo = Markers.OfType<SOF0>().First();
 
             List<OptimizedMCU> mCUs = new List<OptimizedMCU>();
 
             DateTime st = DateTime.Now;
-            while (reader.BaseStream.Position != reader.BaseStream.Length)
+
+            while (reader.BaseStream.Position != reader.BaseStream.Length || !reader.IsEOF())
             {
-                if (mCUs.Count == 8281)
-                    Debugger.Break();
+                //if (mCUs.Count == 8281)
+                //    Debugger.Break();
 
                 //TODO Check for last blocks when reader ends
-                OptimizedMCU optimizedMCU = new OptimizedMCU(dcLuminanceTable, acLuminanceTable, dcChrominanceTable, acChrominanceTable);
+                OptimizedMCU optimizedMCU = new OptimizedMCU(imageInfo, dcLuminanceTable, acLuminanceTable, dcChrominanceTable, acChrominanceTable);
                 optimizedMCU.Read(reader);
                 mCUs.Insert(0, optimizedMCU);
+                //mCUs.Add(optimizedMCU);
 
-                if (restartInterval != null && mCUs.Count % restartInterval.RestartInterval == 0)
+                if (restartInterval != null && mCUs.Count % restartInterval.RestartInterval == 0 && !reader.IsEOF())
                 {
-                    Console.WriteLine((DateTime.Now - st).TotalMilliseconds);
-                    st = DateTime.Now;
+                    //Console.WriteLine((DateTime.Now - st).TotalMilliseconds);
+                    //st = DateTime.Now;
                     restartInterval.ProcessCurrent(reader);
                 }
             }

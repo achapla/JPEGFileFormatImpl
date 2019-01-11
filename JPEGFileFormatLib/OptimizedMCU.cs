@@ -19,22 +19,56 @@ namespace JPEGFileFormatLib
         readonly Markers.DHT.DHTStruct ACLuminanceTable;
         readonly Markers.DHT.DHTStruct DCChrominanceTable;
         readonly Markers.DHT.DHTStruct ACChrominanceTable;
-        public Component[] Components;
+        public List<Component> Components = new List<Component>();
 
-        public OptimizedMCU(Markers.DHT.DHTStruct dcLuminanceTable, Markers.DHT.DHTStruct acLuminanceTable, Markers.DHT.DHTStruct dcChrominanceTable, Markers.DHT.DHTStruct acChrominanceTable)
+        public OptimizedMCU(SOF0 imageInfo, Markers.DHT.DHTStruct dcLuminanceTable, Markers.DHT.DHTStruct acLuminanceTable, Markers.DHT.DHTStruct dcChrominanceTable, Markers.DHT.DHTStruct acChrominanceTable)
         {
             DCLuminanceTable = dcLuminanceTable;
             ACLuminanceTable = acLuminanceTable;
             DCChrominanceTable = dcChrominanceTable;
             ACChrominanceTable = acChrominanceTable;
+
+            foreach (SOF0.SOF0Component imageComp in imageInfo.Components)
+            {
+                if (imageComp.componentId == 1)
+                {
+                    if (imageComp.horizontal == 1)
+                    {
+                        Components.Add(new Component("Y", DCLuminanceTable, ACLuminanceTable));
+                    }
+                    else if (imageComp.horizontal == 2)
+                    {
+                        Components.Add(new Component("Y", DCLuminanceTable, ACLuminanceTable));
+                        Components.Add(new Component("Y", DCLuminanceTable, ACLuminanceTable));
+                        Components.Add(new Component("Y", DCLuminanceTable, ACLuminanceTable));
+                        Components.Add(new Component("Y", DCLuminanceTable, ACLuminanceTable));
+                    }
+                }
+
+                if (imageComp.componentId == 2)
+                {
+                    if (imageComp.vertical == 1)
+                    {
+                        Components.Add(new Component("Cb", DCChrominanceTable, ACChrominanceTable));
+                    }
+                }
+
+                if (imageComp.componentId == 3)
+                {
+                    if (imageComp.vertical == 1)
+                    {
+                        Components.Add(new Component("Cr", DCChrominanceTable, ACChrominanceTable));
+                    }
+                }
+            }
         }
 
         public void Read(BinaryReaderFlexiEndian reader)
         {
-            Components = new Component[3] { new Component("Y"), new Component("Cb"), new Component("Cr") };
-            Components[0].Read(reader, DCLuminanceTable, ACLuminanceTable);
-            Components[1].Read(reader, DCChrominanceTable, ACChrominanceTable);
-            Components[2].Read(reader, DCChrominanceTable, ACChrominanceTable);
+            foreach (var comp in Components)
+            {
+                comp.Read(reader);
+            }
         }
 
         public override string ToString()
@@ -47,26 +81,30 @@ namespace JPEGFileFormatLib
             public string ChannelName { get; private set; }
             public int DCValue { get; private set; }
             public int[] ACValues { get; } = new int[63];
+            public Markers.DHT.DHTStruct DCTable;
+            public Markers.DHT.DHTStruct ACTable;
 
-            public Component(string channelName)
+            public Component(string channelName, Markers.DHT.DHTStruct dcTable, Markers.DHT.DHTStruct acTable)
             {
                 ChannelName = channelName;
+                DCTable = dcTable;
+                ACTable = acTable;
             }
 
-            public void Read(BinaryReaderFlexiEndian reader, Markers.DHT.DHTStruct dcTable, Markers.DHT.DHTStruct acTable)
+            public void Read(BinaryReaderFlexiEndian reader)
             {
-                ReadDCValue(reader, dcTable);
-                ReadACValue(reader, acTable);
+                ReadDCValue(reader);
+                ReadACValue(reader);
             }
 
-            private void ReadACValue(BinaryReaderFlexiEndian reader, DHT.DHTStruct acTable)
+            private void ReadACValue(BinaryReaderFlexiEndian reader)
             {
                 for (int i = 0; i < ACValues.Length; i++)
                 {
-                    if (i == 28)
+                    if (i == 5)
                         i = i;
                     reader.FillBitData();
-                    int bitLength = acTable.MinCodeLength - 1;
+                    int bitLength = ACTable.MinCodeLength - 1;
                     ushort codeValue;
 
                     BitVector32 debugBits = new BitVector32((int)(reader.DataBuffer >> 32));
@@ -74,11 +112,11 @@ namespace JPEGFileFormatLib
                     do
                     {
                         codeValue = reader.TakeBits(++bitLength);
-                    } while (!acTable.CodeTable.ContainsKey(codeValue));
+                    } while (!(ACTable.CodeTable.ContainsKey(codeValue) && ACTable.CodeLength[codeValue] == bitLength));
 
                     reader.RemoveBits(bitLength);
 
-                    int dataLength = acTable.CodeTable[codeValue];
+                    int dataLength = ACTable.CodeTable[codeValue];
 
                     if (dataLength == 0)
                         break;
@@ -102,10 +140,10 @@ namespace JPEGFileFormatLib
                 }
             }
 
-            private void ReadDCValue(BinaryReaderFlexiEndian reader, Markers.DHT.DHTStruct dcTable)
+            private void ReadDCValue(BinaryReaderFlexiEndian reader)
             {
                 reader.FillBitData();
-                int bitLength = dcTable.MinCodeLength - 1;
+                int bitLength = DCTable.MinCodeLength - 1;
                 ushort codeValue;
 
                 BitVector32 debugBits = new BitVector32((int)(reader.DataBuffer >> 32));
@@ -113,11 +151,11 @@ namespace JPEGFileFormatLib
                 do
                 {
                     codeValue = reader.TakeBits(++bitLength);
-                } while (!dcTable.CodeTable.ContainsKey(codeValue));
+                } while (!(DCTable.CodeTable.ContainsKey(codeValue) && DCTable.CodeLength[codeValue] == bitLength));
 
                 reader.RemoveBits(bitLength);
 
-                int dataLength = dcTable.CodeTable[codeValue];
+                int dataLength = DCTable.CodeTable[codeValue];
                 if (dataLength == 0)
                     return;
 
